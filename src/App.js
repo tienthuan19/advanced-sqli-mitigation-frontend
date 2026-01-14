@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
-const BlockedScreen = () => (
+const BlockedScreen = ({ onReset }) => (
     <div className="fixed inset-0 bg-red-950 z-[9999] flex flex-col items-center justify-center text-white text-center p-4 font-sans animate-fade-in">
       <div className="bg-red-900/50 p-12 rounded-3xl border-4 border-red-600 shadow-2xl max-w-3xl backdrop-blur-sm">
         <div className="text-8xl mb-6">🚫</div>
         <h1 className="text-6xl font-black tracking-widest text-red-500 mb-2">ACCESS DENIED</h1>
         <h2 className="text-3xl font-bold text-white mb-8">SYSTEM SECURITY ALERT</h2>
+        <p className="text-xl text-gray-200 mb-8 leading-relaxed">
+          Your connection has been dropped by the Firewall due to suspicious activity.
+        </p>
         <p className="mt-8 text-xs text-gray-500">CyberShop Security Defense System v2.0</p>
+
+        {/* Nút Reset Demo (Chỉ dùng cho lúc Demo để gỡ nhanh) */}
+        <button
+            onClick={onReset}
+            className="mt-8 text-xs text-red-400 hover:text-white border border-red-800 px-3 py-1 rounded"
+        >
+          [DEMO ONLY] Reset Local State
+        </button>
       </div>
     </div>
 );
@@ -17,23 +28,19 @@ const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
   const parsePayload = (rawPayload) => {
     if (!rawPayload) return { raw: "No content" };
-
     if (rawPayload.includes("Action:") && rawPayload.includes("|")) {
       const parts = rawPayload.split(" | ");
       const data = { raw: rawPayload };
-
       parts.forEach(part => {
         if (part.startsWith("Action:")) data.action = part.replace("Action:", "").trim();
         if (part.startsWith("Input:")) data.input = part.replace("Input:", "").trim();
         if (part.startsWith("Response:")) {
           let resp = part.replace("Response:", "").trim();
-
           data.response = resp.replace(/\), Product/g, "),\nProduct");
         }
       });
       return data;
     }
-
     return { raw: rawPayload, isRaw: true };
   };
 
@@ -277,6 +284,15 @@ const AdminDashboard = ({ baseUrl }) => {
   );
 };
 
+const fetchWithTimeout = (url, options, timeout = 3000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), timeout)
+    )
+  ]);
+};
+
 function App() {
   const isAdminRoute = window.location.pathname === '/admin';
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -286,7 +302,9 @@ function App() {
   const [isVulnerable, setIsVulnerable] = useState(false);
 
   const [fingerprint, setFingerprint] = useState('');
-  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(() => {
+    return localStorage.getItem('isBlocked') === 'true';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [rawResponse, setRawResponse] = useState(null);
@@ -295,12 +313,24 @@ function App() {
 
   const baseUrl = "http://192.168.2.9:8080";
 
+  const handleBlockDetection = () => {
+    console.log("🔥 DETECTED FIREWALL BLOCK!");
+    setIsBlocked(true);
+    localStorage.setItem('isBlocked', 'true');
+  };
+
+  const handleResetDemo = () => {
+    setIsBlocked(false);
+    localStorage.removeItem('isBlocked');
+    window.location.reload();
+  };
+
   useEffect(() => {
     const setFp = async () => {
       const fp = await FingerprintJS.load();
       const { visitorId } = await fp.get();
       setFingerprint(visitorId);
-      console.log('🆔 Device Fingerprint:', visitorId);
+      console.log('Device Fingerprint:', visitorId);
     };
     setFp();
   }, []);
@@ -318,7 +348,7 @@ function App() {
       const endpoint = isVulnerable ? '/api/vulnerable/products' : '/api/secure/products';
       const apiUrl = `${baseUrl}${endpoint}?query=`;
       console.log(`🔐 Attempting Login via: ${apiUrl}`);
-      const response = await fetch(apiUrl, {
+      const response = await fetchWithTimeout(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -337,6 +367,9 @@ function App() {
       setHasSearched(false);
     } catch (error) {
         console.error('Error loading products:', error);
+        if (error.message === 'TIMEOUT' || error.message.includes('NetworkError')) {
+          handleBlockDetection();
+        }
     }
   };
 
@@ -350,7 +383,7 @@ function App() {
 
     try {
       console.log(`🔐 Attempting Login via: ${apiUrl}`);
-      const response = await fetch(apiUrl, {
+      const response = await fetchWithTimeout(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -381,10 +414,12 @@ function App() {
       }
 
     } catch (error) {
-      console.error('❌ Backend error:', error);
-      //setLoginError({ error: 'Cannot connect to backend. Make sure it is running at http://localhost:5000' });
-      //alert('❌ Backend Error:\n\nCannot connect to server. Please start the backend first.');
-      setIsBlocked(true);
+      console.error('Login Error:', error);
+      if (error.message === 'TIMEOUT' || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+        handleBlockDetection();
+      } else {
+        setLoginError("Connection failed");
+      }
     }
   };
 
@@ -425,10 +460,10 @@ function App() {
       // }
 
     } catch (error) {
-      console.error('❌ Backend error (Possible Block):', error);
-      setSearchResults([]);
-      setIsBlocked(true);
-      //alert('❌ Backend Error:\n\nCannot connect to server. Please start the backend first.');
+      console.error('Search Error:', error);
+      if (error.message === 'TIMEOUT' || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+        handleBlockDetection();
+      }
     }
   };
 
