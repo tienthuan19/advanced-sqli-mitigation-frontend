@@ -313,15 +313,15 @@ function App() {
 
   const baseUrl = "http://192.168.2.9:8080";
 
-  const handleBlockDetection = () => {
-    console.log("🔥 DETECTED FIREWALL BLOCK!");
-    setIsBlocked(true);
+  const handleDetection = () => {
+    console.warn("🚨 FIREWALL DETECTED BLOCKING CONNECTION!");
     localStorage.setItem('isBlocked', 'true');
+    setIsBlocked(true);
   };
 
   const handleResetDemo = () => {
-    setIsBlocked(false);
     localStorage.removeItem('isBlocked');
+    setIsBlocked(false);
     window.location.reload();
   };
 
@@ -368,7 +368,7 @@ function App() {
     } catch (error) {
         console.error('Error loading products:', error);
         if (error.message === 'TIMEOUT' || error.message.includes('NetworkError')) {
-          handleBlockDetection();
+          handleDetection();
         }
     }
   };
@@ -416,7 +416,7 @@ function App() {
     } catch (error) {
       console.error('Login Error:', error);
       if (error.message === 'TIMEOUT' || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-        handleBlockDetection();
+        handleDetection();
       } else {
         setLoginError("Connection failed");
       }
@@ -462,7 +462,7 @@ function App() {
     } catch (error) {
       console.error('Search Error:', error);
       if (error.message === 'TIMEOUT' || error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-        handleBlockDetection();
+        handleDetection();
       }
     }
   };
@@ -476,7 +476,7 @@ function App() {
     setSearchError(null);
   };
   if (isBlocked) {
-    return <BlockedScreen fingerprint={fingerprint} />;
+    return <BlockedScreen onReset={handleResetDemo} fingerprint={fingerprint} />;
   }
   if (isAdminRoute) {
     return <AdminDashboard baseUrl={baseUrl} />;
