@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
+const BlockedScreen = () => (
+    <div className="fixed inset-0 bg-red-950 z-[9999] flex flex-col items-center justify-center text-white text-center p-4 font-sans animate-fade-in">
+      <div className="bg-red-900/50 p-12 rounded-3xl border-4 border-red-600 shadow-2xl max-w-3xl backdrop-blur-sm">
+        <div className="text-8xl mb-6">🚫</div>
+        <h1 className="text-6xl font-black tracking-widest text-red-500 mb-2">ACCESS DENIED</h1>
+        <h2 className="text-3xl font-bold text-white mb-8">SYSTEM SECURITY ALERT</h2>
+        <p className="mt-8 text-xs text-gray-500">CyberShop Security Defense System v2.0</p>
+      </div>
+    </div>
+);
+
 // --- COMPONENT: MODAL CHI TIẾT PAYLOAD ---
 const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
-
-  // Hàm Parser: Tách chuỗi payload thành object { action, input, response }
   const parsePayload = (rawPayload) => {
     if (!rawPayload) return { raw: "No content" };
 
-    // Kiểm tra xem payload có đúng định dạng "Action: ... | Input: ..." không
     if (rawPayload.includes("Action:") && rawPayload.includes("|")) {
       const parts = rawPayload.split(" | ");
       const data = { raw: rawPayload };
@@ -19,15 +27,13 @@ const LogDetailModal = ({ log, onClose }) => {
         if (part.startsWith("Input:")) data.input = part.replace("Input:", "").trim();
         if (part.startsWith("Response:")) {
           let resp = part.replace("Response:", "").trim();
-          // Format lại Response: Xuống dòng sau mỗi dấu phẩy ngăn cách các Object Product
-          // Ví dụ: Product(...), Product(...) -> Product(...),\nProduct(...)
+
           data.response = resp.replace(/\), Product/g, "),\nProduct");
         }
       });
       return data;
     }
 
-    // Nếu không đúng định dạng (ví dụ log SQL Injection thô), trả về nguyên gốc
     return { raw: rawPayload, isRaw: true };
   };
 
@@ -280,7 +286,7 @@ function App() {
   const [isVulnerable, setIsVulnerable] = useState(false);
 
   const [fingerprint, setFingerprint] = useState('');
-
+  const [isBlocked, setIsBlocked] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [rawResponse, setRawResponse] = useState(null);
@@ -301,7 +307,7 @@ function App() {
 
   // Load all products when logged in
   useEffect(() => {
-    if (isAdminRoute) return;
+    if (isAdminRoute || isBlocked) return;
     if (isLoggedIn && searchResults.length === 0) {
       loadAllProducts();
     }
@@ -330,7 +336,7 @@ function App() {
       });
       setHasSearched(false);
     } catch (error) {
-      console.error('❌ Error loading products:', error);
+        console.error('Error loading products:', error);
     }
   };
 
@@ -376,8 +382,9 @@ function App() {
 
     } catch (error) {
       console.error('❌ Backend error:', error);
-      setLoginError({ error: 'Cannot connect to backend. Make sure it is running at http://localhost:5000' });
-      alert('❌ Backend Error:\n\nCannot connect to server. Please start the backend first.');
+      //setLoginError({ error: 'Cannot connect to backend. Make sure it is running at http://localhost:5000' });
+      //alert('❌ Backend Error:\n\nCannot connect to server. Please start the backend first.');
+      setIsBlocked(true);
     }
   };
 
@@ -418,14 +425,9 @@ function App() {
       // }
 
     } catch (error) {
-      console.error('❌ Backend error:', error);
-      const errorData = {
-        success: false,
-        error: 'Cannot connect to backend',
-        query: query
-      };
-      setRawResponse(errorData);
+      console.error('❌ Backend error (Possible Block):', error);
       setSearchResults([]);
+      setIsBlocked(true);
       //alert('❌ Backend Error:\n\nCannot connect to server. Please start the backend first.');
     }
   };
@@ -438,6 +440,9 @@ function App() {
     setHasSearched(false);
     setSearchError(null);
   };
+  if (isBlocked) {
+    return <BlockedScreen fingerprint={fingerprint} />;
+  }
   if (isAdminRoute) {
     return <AdminDashboard baseUrl={baseUrl} />;
   }
