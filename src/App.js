@@ -558,21 +558,21 @@ function App() {
             )}
 
             {/* Attack Hints */}
-            <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
-              <p className="text-sm font-bold text-yellow-800 mb-2">💡 Attack Hints:</p>
-              <p className="text-xs text-yellow-700 mb-1">
-                <strong>Classic SQL Injection:</strong>
-              </p>
-              <code className="text-xs bg-yellow-100 px-2 py-1 rounded block mb-2">
-                Username: ' OR 1=1 --
-              </code>
-              <p className="text-xs text-yellow-700 mb-1">
-                <strong>Error-Based SQL Injection:</strong>
-              </p>
-              <code className="text-xs bg-yellow-100 px-2 py-1 rounded block">
-                Username: '
-              </code>
-            </div>
+            {/*<div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">*/}
+            {/*  <p className="text-sm font-bold text-yellow-800 mb-2">💡 Attack Hints:</p>*/}
+            {/*  <p className="text-xs text-yellow-700 mb-1">*/}
+            {/*    <strong>Classic SQL Injection:</strong>*/}
+            {/*  </p>*/}
+            {/*  <code className="text-xs bg-yellow-100 px-2 py-1 rounded block mb-2">*/}
+            {/*    Username: ' OR 1=1 --*/}
+            {/*  </code>*/}
+            {/*  <p className="text-xs text-yellow-700 mb-1">*/}
+            {/*    <strong>Error-Based SQL Injection:</strong>*/}
+            {/*  </p>*/}
+            {/*  <code className="text-xs bg-yellow-100 px-2 py-1 rounded block">*/}
+            {/*    Username: '*/}
+            {/*  </code>*/}
+            {/*</div>*/}
 
             <p className="text-gray-500 text-center mt-6 text-sm">🔒 Educational Demo - Cyber Security Project</p>
           </div>
@@ -641,13 +641,7 @@ function App() {
             <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
               <p className="text-sm font-bold text-yellow-800 mb-2">💡 Union-Based SQL Injection Hint:</p>
               <code className="text-xs bg-yellow-100 px-2 py-1 rounded block mb-2">
-                ' UNION SELECT username, password FROM users --
-              </code>
-              <p className="text-xs text-yellow-700 mb-1">
-                <strong>Error-Based SQL Injection:</strong>
-              </p>
-              <code className="text-xs bg-yellow-100 px-2 py-1 rounded block">
-                '
+                ' UNION SELECT 0, username ||' : '|| password, 0 FROM users --
               </code>
             </div>
           )}
